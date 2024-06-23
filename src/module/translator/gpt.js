@@ -116,9 +116,9 @@ async function getModelList(apiKey = null) {
     for (let index = 0; index < list.length; index++) {
       const element = list[index];
       regGptModel.lastIndex = 0;
-      if (regGptModel.test(element)) {
+       
         gptList.push(element);
-      }
+       
     }
 
     return gptList.sort();
