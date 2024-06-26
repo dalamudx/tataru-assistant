@@ -2,7 +2,11 @@
 
 - [原始碼使用說明](https://github.com/winw1010/tataru-assistant/blob/main/doc/README_SOURCE.md)
 
-- [下載 Tataru Assistant](https://github.com/winw1010/tataru-assistant/releases/latest/download/Tataru_Assistant_Setup.exe)
+- [下載 Tataru Assistant](https://github.com/dalamudx/tataru-assistant/releases/latest/download/Tataru_Assistant_Setup.exe)
+
+## 分叉异同
+- 对比上游只去除了对模型列表限制，使得能够使用类openapi接口模型，比如qwen、llama、自建模型等
+- 修改版本检查地址到本仓库，新版本发布后可通过github release下载
 
 ## 安裝步驟
 

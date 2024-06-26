@@ -15,13 +15,22 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      
+      - name: Sync upstream changes
+        id: sync
+        uses: aormsby/Fork-Sync-With-Upstream-action@v3.4.1
+        with:
+          target_sync_branch: main
+          target_repo_token: ${{ secrets.GITHUB_TOKEN }}
+          upstream_sync_branch: main
+          upstream_sync_repo: winw1010/tataru-assistant
 
-      - name: Execute version check script
-        id: auto-check
-        run: bash .github/workflows/autocheck.sh
+      - name: Execute version check and auto fix script
+        id: auto-fix
+        run: bash -x .github/workflows/autocheck.sh
 
       - name: Build and package
-        if: steps.auto-check.outputs.status == 'ready'
+        if: steps.auto-fix.outputs.status == 'ready' && steps.auto-fix.outputs.release_tag != ''
         run: |
           npm install
           npm run dist
@@ -29,22 +38,22 @@ jobs:
 
       - name: Create release
         id: create_release
-        if: steps.auto-check.outputs.status == 'ready'
+        if: steps.auto-fix.outputs.status == 'ready' && steps.auto-fix.outputs.release_tag != ''
         uses: comnoco/create-release-action@v2
         env:
-          RELEASE_VERSION: ${{ steps.auto-check.outputs.release_tag }}
+          RELEASE_VERSION: ${{ steps.auto-fix.outputs.release_tag }}
         with:
           tag_name: v${{ env.RELEASE_VERSION }}
           release_name: Release v${{ env.RELEASE_VERSION }}
 
       - name: Upload artifact
-        if: steps.auto-check.outputs.status == 'ready'
+        if: steps.auto-fix.outputs.status == 'ready' && steps.auto-fix.outputs.release_tag != ''
         uses: actions/upload-release-asset@v1
         env:
-          RELEASE_VERSION: ${{ steps.auto-check.outputs.release_tag }}
+          RELEASE_VERSION: ${{ steps.auto-fix.outputs.release_tag }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: build/Tataru Assistant Setup ${{ steps.auto-check.outputs.release_tag }}.exe
+          asset_path: build/Tataru Assistant Setup ${{ steps.auto-fix.outputs.release_tag }}.exe
           asset_name: Tataru_Assistant_Setup.exe
           asset_content_type: application/octet-stream
 
