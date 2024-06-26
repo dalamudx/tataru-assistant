@@ -395,7 +395,7 @@ function setRequestChannel() {
     let notificationText = '';
 
     requestModule
-      .get('https://raw.githubusercontent.com/winw1010/tataru-assistant-text/main/version.json')
+      .get('https://raw.githubusercontent.com/dalamudx/tataru-assistant/main/version.json')
       .then((response) => {
         if (response.data.scu && response.data.userAgent) {
           // set request config
