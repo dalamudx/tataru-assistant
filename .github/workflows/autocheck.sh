@@ -30,7 +30,7 @@ then
     #remove models limit
     sed -i '/if (regGptModel.test(element)) {/,/}/ s// /' src/module/translator/gpt.js
     #new version link
-    UPSTREAMPACKAGE="https://home.gamer.com.tw/artwork.php?sn=5323128"
+    UPSTREAMPACKAGE="https://github.com/winw1010/tataru-assistant/releases/latest/download/Tataru_Assistant_Setup.exe"
     LOCALPACKAGE="https://github.com/dalamudx/tataru-assistant/releases/latest/download/Tataru_Assistant_Setup.exe"
     sed -i "s|${UPSTREAMPACKAGE}|${LOCALPACKAGE}|g" src/html/util/index.js
     #update version.json
