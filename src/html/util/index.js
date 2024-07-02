@@ -234,7 +234,7 @@ function setButton() {
   document.getElementById('img-button-update').onclick = () => {
     ipcRenderer.send(
       'execute-command',
-      'explorer "https://github.com/winw1010/tataru-assistant/releases/latest/download/Tataru_Assistant_Setup.exe"'
+      'explorer "https://github.com/dalamudx/tataru-assistant/releases/latest/download/Tataru_Assistant_Setup.exe"'
     );
   };
 
