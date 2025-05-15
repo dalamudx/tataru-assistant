@@ -1,55 +1,235 @@
-name: Build and deploy Tataru Assistant
+#############################################
+# Tataru Assistant Build and Deploy Workflow
+#############################################
+
+name: Build and Deploy
+
+# Trigger conditions
 on:
+  # Manual trigger
   workflow_dispatch:
-  schedule:
-    - cron: '0 */2 * * *'
+  # Auto trigger on push to main branch
   push:
     branches:
       - main
+    # Ignore changes to documentation and configuration files
+    paths-ignore:
+      - '**.md'
+      - '.gitignore'
+      - '.github/ISSUE_TEMPLATE/**'
+      - 'doc/**'
 
+# Environment variables
+env:
+  APP_NAME: Tataru Assistant
+
+# Jobs definition
 jobs:
+  #############################################
+  # Main job: Build and deploy the application
+  #############################################
   build-and-deploy:
+    name: Build and Deploy
     runs-on: windows-latest
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
     steps:
+      #############################################
+      # Setup steps
+      #############################################
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for proper versioning
 
-      - name: Execute version check script
-        id: auto-check
-        run: bash .github/workflows/autocheck.sh
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'  # Use latest LTS version
+          cache: 'npm'
+
+      - name: Setup Git
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+
+      #############################################
+      # Version detection and comparison
+      #############################################
+      - name: Get current version from package.json
+        id: package_version
+        run: |
+          $version = (Get-Content -Raw -Path package.json | ConvertFrom-Json).version
+          echo "RELEASE_TAG=$version" >> $env:GITHUB_OUTPUT
+          echo "::notice::Current version: $version"
+
+      - name: Get latest published version
+        id: published_version
+        run: |
+          try {
+            $latest_release = (Invoke-RestMethod -Uri "https://api.github.com/repos/${{ github.repository }}/releases" -Headers @{Authorization="Bearer $env:GITHUB_TOKEN"} | Select-Object -First 1).tag_name
+            $latest_version = $latest_release -replace 'v', ''
+            echo "PUBLISHED_TAG=$latest_version" >> $env:GITHUB_OUTPUT
+            echo "::notice::Latest published version: $latest_version"
+          }
+          catch {
+            echo "::warning::Error getting latest version: $_"
+            echo "PUBLISHED_TAG=" >> $env:GITHUB_OUTPUT
+            echo "::notice::Will proceed with build as no previous version was found"
+          }
+
+      - name: Compare versions
+        id: version_check
+        run: |
+          $current = "${{ steps.package_version.outputs.RELEASE_TAG }}"
+          $published = "${{ steps.published_version.outputs.PUBLISHED_TAG }}"
+
+          echo "Current version: $current"
+          echo "Published version: $published"
+
+          $status = "not_ready"
+
+          if ([string]::IsNullOrEmpty($published)) {
+            $status = "ready"
+            echo "::notice::No previous version found, will build and deploy"
+          }
+          elseif ([version]::TryParse($current, [ref]$null) -and [version]::TryParse($published, [ref]$null)) {
+            if ([System.Version]$current -gt [System.Version]$published) {
+              $status = "ready"
+              echo "::notice::New version detected, will build and deploy"
+            }
+            else {
+              echo "::notice::No new version, skipping build and deploy"
+            }
+          }
+          else {
+            echo "::warning::Version format is not standard. Performing string comparison instead."
+            if ($current -ne $published) {
+              $status = "ready"
+              echo "::notice::Different version string detected, will build and deploy"
+            }
+            else {
+              echo "::notice::No version change, skipping build and deploy"
+            }
+          }
+
+          echo "STATUS=$status" >> $env:GITHUB_OUTPUT
+
+      #############################################
+      # Build steps (only run if new version detected)
+      #############################################
+      - name: Install dependencies
+        if: steps.version_check.outputs.STATUS == 'ready'
+        run: npm ci
 
       - name: Build and package
-        if: steps.auto-check.outputs.status == 'ready'
+        if: steps.version_check.outputs.STATUS == 'ready'
+        run: npm run dist
+        env:
+          ELECTRON_CACHE: ${{ github.workspace }}/.cache/electron
+          ELECTRON_BUILDER_CACHE: ${{ github.workspace }}/.cache/electron-builder
+
+      - name: Verify build artifacts
+        if: steps.version_check.outputs.STATUS == 'ready'
         run: |
-          npm install
-          npm run dist
-          npx electron-builder --win --x64
+          $setupFile = "build/${{ env.APP_NAME }} Setup ${{ steps.package_version.outputs.RELEASE_TAG }}.exe"
+          if (Test-Path $setupFile) {
+            echo "::notice::Build artifact verified: $setupFile exists"
+          } else {
+            echo "::error::Build artifact not found!"
+            exit 1
+          }
+
+      #############################################
+      # Release steps (only run if new version detected)
+      #############################################
+      - name: Get recent commits
+        id: get_commits
+        if: steps.version_check.outputs.STATUS == 'ready'
+        run: |
+          # Get the previous tag if it exists
+          $previousTag = ""
+          try {
+            $previousTag = git describe --tags --abbrev=0 HEAD^ 2>$null
+            if (-not $previousTag) {
+              $previousTag = ""
+            }
+          } catch {
+            # No previous tag found, will get all commits
+          }
+
+          # Get commit messages since the previous tag or the last 10 commits if no previous tag
+          $commitLog = ""
+          if ($previousTag) {
+            echo "::notice::Getting commits since tag $previousTag"
+            $commitLog = git log --pretty=format:"- %s (%h)" "$previousTag..HEAD"
+          } else {
+            echo "::notice::No previous tag found, getting the last 10 commits"
+            $commitLog = git log --pretty=format:"- %s (%h)" -n 10
+          }
+
+          # Escape newlines for GitHub Actions
+          $commitLog = $commitLog -replace "`n", "%0A"
+
+          # Set output variable
+          echo "COMMIT_LOG=$commitLog" >> $env:GITHUB_OUTPUT
+
+          # Show the commit log for debugging
+          echo "Commit log:"
+          echo $commitLog.replace("%0A", "`n")
 
       - name: Create release
         id: create_release
-        if: steps.auto-check.outputs.status == 'ready'
+        if: steps.version_check.outputs.STATUS == 'ready'
         uses: comnoco/create-release-action@v2
         env:
-          RELEASE_VERSION: ${{ steps.auto-check.outputs.release_tag }}
+          RELEASE_VERSION: ${{ steps.package_version.outputs.RELEASE_TAG }}
         with:
           tag_name: v${{ env.RELEASE_VERSION }}
           release_name: Release v${{ env.RELEASE_VERSION }}
+          body: |
+            # ${{ env.APP_NAME }} v${{ env.RELEASE_VERSION }}
+
+            Automated release from GitHub Actions workflow.
+
+            ## Installation
+            Download and run the installer to install ${{ env.APP_NAME }}.
+
+            ## Changes
+            ${{ steps.get_commits.outputs.COMMIT_LOG }}
 
       - name: Upload artifact
-        if: steps.auto-check.outputs.status == 'ready'
+        if: steps.version_check.outputs.STATUS == 'ready'
         uses: actions/upload-release-asset@v1
         env:
-          RELEASE_VERSION: ${{ steps.auto-check.outputs.release_tag }}
+          RELEASE_VERSION: ${{ steps.package_version.outputs.RELEASE_TAG }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: build/Tataru Assistant Setup ${{ steps.auto-check.outputs.release_tag }}.exe
+          asset_path: build/${{ env.APP_NAME }} Setup ${{ steps.package_version.outputs.RELEASE_TAG }}.exe
           asset_name: Tataru_Assistant_Setup.exe
           asset_content_type: application/octet-stream
 
-  del_runs:
+      #############################################
+      # Notification steps
+      #############################################
+      - name: Notify on success
+        if: success() && steps.version_check.outputs.STATUS == 'ready'
+        run: |
+          echo "::notice::Successfully built and released ${{ env.APP_NAME }} v${{ steps.package_version.outputs.RELEASE_TAG }}"
+
+      - name: Notify on failure
+        if: failure() && steps.version_check.outputs.STATUS == 'ready'
+        run: |
+          echo "::error::Failed to build or release ${{ env.APP_NAME }} v${{ steps.package_version.outputs.RELEASE_TAG }}"
+
+  #############################################
+  # Cleanup job: Delete old workflow runs
+  #############################################
+  cleanup:
+    name: Cleanup Old Runs
     runs-on: ubuntu-latest
+    needs: build-and-deploy
     permissions:
       actions: write
     steps:
@@ -59,4 +239,4 @@ jobs:
           token: ${{ github.token }}
           repository: ${{ github.repository }}
           retain_days: 0
-          keep_minimum_runs: 6
+          keep_minimum_runs: 12

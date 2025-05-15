@@ -392,7 +392,7 @@ function setRequestChannel() {
   ipcMain.on('version-check', (event) => {
     // get lastest version
     requestModule
-      .get('https://api.github.com/repos/winw1010/tataru-assistant/releases/latest')
+      .get('https://api.github.com/repos/dalamudx/tataru-assistant/releases/latest')
       .then((response) => {
         // compare with app version
         const latestVersion = response?.data?.tag_name;

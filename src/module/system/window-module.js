@@ -1,3 +1,4 @@
+
 'use strict';
 
 // electron modules
@@ -128,6 +129,15 @@ function createWindow(windowName, data = null) {
 
     // save window
     setWindow(windowName, appWindow);
+
+    // add listeners for window size and position changes
+    appWindow.on('resize', debounce(() => {
+      saveWindowBounds(windowName, appWindow);
+    }, 500));
+
+    appWindow.on('move', debounce(() => {
+      saveWindowBounds(windowName, appWindow);
+    }, 500));
   } catch (error) {
     console.log(error);
   }
@@ -399,6 +409,44 @@ function openDevTools() {
 // console log
 function consoleLog(text) {
   sendIndex('console-log', text);
+}
+
+// function to save window bounds
+function saveWindowBounds(windowName, appWindow) {
+  try {
+    const config = configModule.getConfig();
+    const bounds = appWindow.getContentBounds();
+
+    if (windowName === 'index') {
+      config.indexWindow.x = bounds.x;
+      config.indexWindow.y = bounds.y;
+      config.indexWindow.width = bounds.width;
+      config.indexWindow.height = bounds.height;
+    } else if (windowName === 'capture') {
+      config.captureWindow.x = bounds.x;
+      config.captureWindow.y = bounds.y;
+      config.captureWindow.width = bounds.width;
+      config.captureWindow.height = bounds.height;
+    }
+
+    configModule.setConfig(config);
+    configModule.saveConfig();
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+// debounce function
+function debounce(func, wait) {
+  let timeout;
+  return function() {
+    const context = this;
+    const args = arguments;
+    clearTimeout(timeout);
+    timeout = setTimeout(() => {
+      func.apply(context, args);
+    }, wait);
+  };
 }
 
 // module exports
