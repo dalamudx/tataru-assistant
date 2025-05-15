@@ -179,24 +179,107 @@ jobs:
             $commits = git log --pretty=format:"%s (%h)" -n 10 | ForEach-Object { $_ }
           }
 
-          # Format commits as a Markdown list with proper line breaks
-          $commitLog = ""
+          # Create a temporary file to store the commit log
+          $tempFile = New-TemporaryFile
+
+          # Write changelog title with emoji
+          "## 📋 Changes" | Out-File -FilePath $tempFile -Encoding utf8
+
+          # Write each commit as a separate line in the file with emoji
           foreach ($commit in $commits) {
-            $commitLog += "- $commit`n"
+            # Extract commit message and hash
+            if ($commit -match "^(.*) \(([a-f0-9]+)\)$") {
+              $message = $matches[1]
+              $hash = $matches[2]
+
+              # Determine emoji based on commit message
+              $emoji = "✅" # Default emoji
+
+              if ($message -match "^fix|bug|修复|错误") {
+                $emoji = "🐛"
+              }
+              elseif ($message -match "^feat|feature|新功能|添加") {
+                $emoji = "✨"
+              }
+              elseif ($message -match "^doc|文档") {
+                $emoji = "📝"
+              }
+              elseif ($message -match "^style|样式|UI") {
+                $emoji = "💄"
+              }
+              elseif ($message -match "^refactor|重构") {
+                $emoji = "♻️"
+              }
+              elseif ($message -match "^perf|性能") {
+                $emoji = "⚡"
+              }
+              elseif ($message -match "^test|测试") {
+                $emoji = "🧪"
+              }
+              elseif ($message -match "^chore|构建|部署") {
+                $emoji = "🔧"
+              }
+              elseif ($message -match "^update|更新") {
+                $emoji = "🔄"
+              }
+
+              # Write commit with emoji
+              "- $emoji $message ($hash)" | Out-File -FilePath $tempFile -Encoding utf8 -Append
+            }
+            else {
+              # Fallback if regex doesn't match
+              "- ✅ $commit" | Out-File -FilePath $tempFile -Encoding utf8 -Append
+            }
           }
 
-          # Remove trailing newline if any
-          $commitLog = $commitLog.TrimEnd("`n")
-
-          # Escape newlines for GitHub Actions
-          $commitLog = $commitLog -replace "`n", "%0A"
-
-          # Set output variable
-          echo "COMMIT_LOG=$commitLog" >> $env:GITHUB_OUTPUT
+          # Set the file path as an output variable
+          echo "COMMIT_LOG_FILE=$tempFile" >> $env:GITHUB_OUTPUT
 
           # Show the commit log for debugging
           echo "Commit log:"
-          echo $commitLog.replace("%0A", "`n")
+          Get-Content -Path $tempFile | ForEach-Object { echo $_ }
+
+      - name: Rename installer file
+        if: steps.version_check.outputs.STATUS == 'ready'
+        run: |
+          $sourceFile = "build/${{ env.APP_NAME }} Setup ${{ steps.package_version.outputs.RELEASE_TAG }}.exe"
+          $targetFile = "build/Tataru_Assistant_Setup.exe"
+
+          if (Test-Path $sourceFile) {
+            echo "::notice::Copying $sourceFile to $targetFile"
+            Copy-Item -Path $sourceFile -Destination $targetFile -Force
+
+            if (Test-Path $targetFile) {
+              echo "::notice::File successfully copied and renamed"
+            } else {
+              echo "::error::Failed to copy file"
+              exit 1
+            }
+          } else {
+            echo "::error::Source file not found: $sourceFile"
+
+            # List files in build directory for debugging
+            echo "Files in build directory:"
+            Get-ChildItem -Path "build" | ForEach-Object { echo $_.Name }
+
+            exit 1
+          }
+
+      - name: Create release notes
+        id: create_release_notes
+        if: steps.version_check.outputs.STATUS == 'ready'
+        run: |
+          $releaseNotesFile = New-TemporaryFile
+
+          # Just use the commit log as release notes
+          Get-Content -Path ${{ steps.get_commits.outputs.COMMIT_LOG_FILE }} | Out-File -FilePath $releaseNotesFile -Encoding utf8
+
+          # Set the file path as an output variable
+          echo "RELEASE_NOTES_FILE=$releaseNotesFile" >> $env:GITHUB_OUTPUT
+
+          # Show the release notes for debugging
+          echo "Release notes:"
+          Get-Content -Path $releaseNotesFile | ForEach-Object { echo $_ }
 
       - name: Create release and upload artifact
         id: create_release
@@ -207,18 +290,9 @@ jobs:
         with:
           tag_name: v${{ steps.package_version.outputs.RELEASE_TAG }}
           name: Release v${{ steps.package_version.outputs.RELEASE_TAG }}
-          body: |
-            # ${{ env.APP_NAME }} v${{ steps.package_version.outputs.RELEASE_TAG }}
-
-            Automated release from GitHub Actions workflow.
-
-            ## Installation
-            Download and run the installer to install ${{ env.APP_NAME }}.
-
-            ## Changes
-            ${{ steps.get_commits.outputs.COMMIT_LOG }}
+          body_path: ${{ steps.create_release_notes.outputs.RELEASE_NOTES_FILE }}
           files: |
-            build/${{ env.APP_NAME }} Setup ${{ steps.package_version.outputs.RELEASE_TAG }}.exe#Tataru_Assistant_Setup.exe
+            build/Tataru_Assistant_Setup.exe
           draft: false
           prerelease: false
 
