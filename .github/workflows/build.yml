@@ -179,17 +179,17 @@ jobs:
           echo "Commit log:"
           echo $commitLog.replace("%0A", "`n")
 
-      - name: Create release
+      - name: Create release and upload artifact
         id: create_release
         if: steps.version_check.outputs.STATUS == 'ready'
-        uses: comnoco/create-release-action@v2
+        uses: softprops/action-gh-release@v1
         env:
-          RELEASE_VERSION: ${{ steps.package_version.outputs.RELEASE_TAG }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: v${{ env.RELEASE_VERSION }}
-          release_name: Release v${{ env.RELEASE_VERSION }}
+          tag_name: v${{ steps.package_version.outputs.RELEASE_TAG }}
+          name: Release v${{ steps.package_version.outputs.RELEASE_TAG }}
           body: |
-            # ${{ env.APP_NAME }} v${{ env.RELEASE_VERSION }}
+            # ${{ env.APP_NAME }} v${{ steps.package_version.outputs.RELEASE_TAG }}
 
             Automated release from GitHub Actions workflow.
 
@@ -198,17 +198,10 @@ jobs:
 
             ## Changes
             ${{ steps.get_commits.outputs.COMMIT_LOG }}
-
-      - name: Upload artifact
-        if: steps.version_check.outputs.STATUS == 'ready'
-        uses: actions/upload-release-asset@v1
-        env:
-          RELEASE_VERSION: ${{ steps.package_version.outputs.RELEASE_TAG }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: build/${{ env.APP_NAME }} Setup ${{ steps.package_version.outputs.RELEASE_TAG }}.exe
-          asset_name: Tataru_Assistant_Setup.exe
-          asset_content_type: application/octet-stream
+          files: |
+            build/${{ env.APP_NAME }} Setup ${{ steps.package_version.outputs.RELEASE_TAG }}.exe#Tataru_Assistant_Setup.exe
+          draft: false
+          prerelease: false
 
       #############################################
       # Notification steps
