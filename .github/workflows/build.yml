@@ -1,3 +1,4 @@
+
 #############################################
 # Tataru Assistant Build and Deploy Workflow
 #############################################
@@ -130,6 +131,16 @@ jobs:
           ELECTRON_CACHE: ${{ github.workspace }}/.cache/electron
           ELECTRON_BUILDER_CACHE: ${{ github.workspace }}/.cache/electron-builder
 
+      - name: Cache Electron and electron-builder
+        uses: actions/cache@v3
+        with:
+          path: |
+            ${{ github.workspace }}/.cache/electron
+            ${{ github.workspace }}/.cache/electron-builder
+          key: ${{ runner.os }}-electron-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-electron-
+
       - name: Verify build artifacts
         if: steps.version_check.outputs.STATUS == 'ready'
         run: |
@@ -160,14 +171,22 @@ jobs:
           }
 
           # Get commit messages since the previous tag or the last 10 commits if no previous tag
-          $commitLog = ""
           if ($previousTag) {
             echo "::notice::Getting commits since tag $previousTag"
-            $commitLog = git log --pretty=format:"- %s (%h)" "$previousTag..HEAD"
+            $commits = git log --pretty=format:"%s (%h)" "$previousTag..HEAD" | ForEach-Object { $_ }
           } else {
             echo "::notice::No previous tag found, getting the last 10 commits"
-            $commitLog = git log --pretty=format:"- %s (%h)" -n 10
+            $commits = git log --pretty=format:"%s (%h)" -n 10 | ForEach-Object { $_ }
           }
+
+          # Format commits as a Markdown list with proper line breaks
+          $commitLog = ""
+          foreach ($commit in $commits) {
+            $commitLog += "- $commit`n"
+          }
+
+          # Remove trailing newline if any
+          $commitLog = $commitLog.TrimEnd("`n")
 
           # Escape newlines for GitHub Actions
           $commitLog = $commitLog -replace "`n", "%0A"
