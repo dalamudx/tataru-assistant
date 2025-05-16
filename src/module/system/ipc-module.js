@@ -104,11 +104,15 @@ function setSystemChannel() {
     configModule.setConfig(newConfig);
     
     // 当配置更新时，通知所有窗口更新字体设置
-    Object.values(windowModule.getAllWindows()).forEach(win => {
-      if (win && !win.isDestroyed()) {
-        win.webContents.send('update-font-settings', newConfig);
-      }
-    });
+    try {
+      Object.values(windowModule.getAllWindows()).forEach(win => {
+        if (win && !win.isDestroyed() && win.webContents && !win.webContents.isDestroyed()) {
+          win.webContents.send('update-font-settings', newConfig);
+        }
+      });
+    } catch (error) {
+      console.log('Error updating font settings:', error);
+    }
     
     return configModule.getConfig();
   });

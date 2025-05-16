@@ -65,8 +65,8 @@ function createWindow(windowName, data = null) {
     // set event
     switch (windowName) {
       case 'index':
-        // set mouse out check interval
-        setInterval(() => {
+        // 存储定时器引用以便后续清理
+        const mouseOutCheckInterval = setInterval(() => {
           try {
             const config = configModule.getConfig();
             const cursorScreenPoint = screen.getCursorScreenPoint();
@@ -77,14 +77,21 @@ function createWindow(windowName, data = null) {
               cursorScreenPoint.y < windowBounds.y ||
               cursorScreenPoint.y > windowBounds.y + windowBounds.height;
 
-            appWindow.webContents.send('hide-button', { isMouseOut, hideButton: config.indexWindow.hideButton });
+            if (!appWindow.isDestroyed() && appWindow.webContents && !appWindow.webContents.isDestroyed()) {
+              appWindow.webContents.send('hide-button', { isMouseOut, hideButton: config.indexWindow.hideButton });
+            }
           } catch (error) {
-            error;
+            console.log('Error in mouse out check interval:', error);
           }
         }, 100);
 
         // set close event
         appWindow.on('close', () => {
+          // 清除定时器
+          if (mouseOutCheckInterval) {
+            clearInterval(mouseOutCheckInterval);
+          }
+
           // save position
           const config = configModule.getConfig();
           const bounds = appWindow.getContentBounds();
@@ -381,7 +388,14 @@ function setWindow(windowName, myWindow) {
 
 // send
 function send(windowName, channel, ...args) {
-  windowList[windowName]?.webContents?.send(channel, ...args);
+  try {
+    const win = windowList[windowName];
+    if (win && !win.isDestroyed() && win.webContents && !win.webContents.isDestroyed()) {
+      win.webContents.send(channel, ...args);
+    }
+  } catch (error) {
+    console.log(`Error sending message to window ${windowName}:`, error);
+  }
 }
 
 // send index
@@ -394,9 +408,12 @@ function forEachWindow(callback = () => {}) {
   const windowNames = Object.keys(windowList);
   windowNames.forEach((windowName) => {
     try {
-      callback(windowList[windowName]);
+      const win = windowList[windowName];
+      if (win && !win.isDestroyed()) {
+        callback(win);
+      }
     } catch (error) {
-      error;
+      console.log(`Error processing window ${windowName}:`, error);
     }
   });
 }
