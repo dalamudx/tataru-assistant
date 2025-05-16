@@ -224,24 +224,58 @@ function setButton() {
 
 // read config
 async function readConfig() {
-  const config = await ipcRenderer.invoke('get-config');
-  const chatCode = await ipcRenderer.invoke('get-chat-code');
-  const version = await ipcRenderer.invoke('get-version');
+  try {
+    const config = await ipcRenderer.invoke('get-config');
+    const chatCode = await ipcRenderer.invoke('get-chat-code');
+    const version = await ipcRenderer.invoke('get-version');
 
-  // read options
-  readOptions(config);
+    // Ensure config is valid before proceeding
+    if (!config) {
+      console.error(' Tataru Assistant: Failed to load config, or config is null/undefined in readConfig.');
+      document.body.style.fontFamily = ''; // Fallback to default font
+      // Optionally display a minimal error message in the body if critical elements can't be populated
+      // document.body.innerHTML = 'Error: Could not load configuration.';
+      return; // Exit early if config is fundamentally broken
+    }
 
-  // channel
-  readChannel(config, chatCode);
+    // read options (this function has its own try-catch for individual items)
+    readOptions(config);
 
-  // about
-  document.getElementById('span-version').innerText = version;
+    // channel (ensure chatCode is available if readChannel depends on it)
+    if (chatCode) {
+      readChannel(config, chatCode);
+    } else {
+      console.warn('Tataru Assistant: chatCode is not available for readChannel.');
+    }
 
-  // Apply selected font to the config window itself
-  if (config.dialog && config.dialog.fontFamily && config.dialog.fontFamily !== '') {
-    document.body.style.fontFamily = `"${config.dialog.fontFamily}", sans-serif`;
-  } else {
-    document.body.style.fontFamily = ''; // Revert to default CSS for the body (browser default or stylesheet)
+    // about (ensure version is available)
+    if (document.getElementById('span-version')) {
+      document.getElementById('span-version').innerText = version || 'N/A';
+    } else {
+      console.warn('Tataru Assistant: span-version element not found.');
+    }
+
+    // Apply selected font to the config window itself
+    if (config.dialog && typeof config.dialog.fontFamily === 'string') {
+      if (config.dialog.fontFamily !== '') {
+        document.body.style.fontFamily = `\"${config.dialog.fontFamily}\", sans-serif`;
+      } else {
+        document.body.style.fontFamily = ''; // Revert to default CSS for the body
+      }
+    } else {
+      console.warn('Tataru Assistant: config.dialog.fontFamily not found or not a string, using default body font.');
+      document.body.style.fontFamily = ''; 
+    }
+  } catch (error) {
+    console.error('Tataru Assistant: Critical error during readConfig:', error);
+    // Fallback for the entire body font in case of any error in readConfig
+    try {
+      document.body.style.fontFamily = ''; // Attempt to set a known safe default stylesheet font
+      // Display a user-friendly error message in the config window
+      // document.body.innerHTML = 'Error loading configuration window. Please try restarting or resetting settings.';
+    } catch (bodyStyleError) {
+      console.error('Tataru Assistant: Error setting fallback body font style:', bodyStyleError);
+    }
   }
 }
 
