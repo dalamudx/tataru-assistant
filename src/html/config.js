@@ -3,13 +3,62 @@
 // electron
 const { ipcRenderer } = require('electron');
 
+// Cache for translated button texts
+let translatedButtonSelectAll = 'Select All'; // Default/fallback
+let translatedButtonDeselectAll = 'Deselect All'; // Default/fallback
+
 // DOMContentLoaded
 window.addEventListener('DOMContentLoaded', async () => {
   setIPC();
   await setView();
   setEvent();
   setButton();
+
+  // Listen for the custom 'change-ui-text' event to update cached translations for the toggle button
+  // This ensures that if the language changes, our cached strings are updated.
+  document.addEventListener('change-ui-text', () => {
+    const selectAllTextElement = document.getElementById('text-select-all-helper');
+    const deselectAllTextElement = document.getElementById('text-deselect-all-helper');
+    
+    if (selectAllTextElement && selectAllTextElement.innerText) {
+        translatedButtonSelectAll = selectAllTextElement.innerText;
+    }
+    if (deselectAllTextElement && deselectAllTextElement.innerText) {
+        translatedButtonDeselectAll = deselectAllTextElement.innerText;
+    }
+    // After language change, or initial load, update the button text
+    updateChannelSelectAllButtonState(); 
+  });
 });
+
+// Helper function to update the Select/Deselect All button's text
+function updateChannelSelectAllButtonState() {
+    const selectAllButton = document.getElementById('button-channel-select-all');
+    if (!selectAllButton) return;
+
+    const channelCheckboxes = document.querySelectorAll('#div-channel-list input[type="checkbox"].form-check-input');
+    let allCurrentlySelected = channelCheckboxes.length > 0; // Assume true if list is not empty and all are checked
+
+    if (channelCheckboxes.length === 0) { // If no channels, button might be "Select All" or disabled
+        allCurrentlySelected = false; // No items to select
+    } else {
+        for (const checkbox of channelCheckboxes) {
+            if (!checkbox.checked) {
+                allCurrentlySelected = false;
+                break;
+            }
+        }
+    }
+    
+    // Ensure helper texts are loaded if this is called before the first 'change-ui-text'
+    // This is a bit redundant if 'change-ui-text' listener always runs first, but safe.
+    const selectAllTextElement = document.getElementById('text-select-all-helper');
+    const deselectAllTextElement = document.getElementById('text-deselect-all-helper');
+    if (selectAllTextElement && selectAllTextElement.innerText) translatedButtonSelectAll = selectAllTextElement.innerText;
+    if (deselectAllTextElement && deselectAllTextElement.innerText) translatedButtonDeselectAll = deselectAllTextElement.innerText;
+
+    selectAllButton.innerText = allCurrentlySelected ? translatedButtonDeselectAll : translatedButtonSelectAll;
+}
 
 // set IPC
 function setIPC() {
@@ -91,6 +140,11 @@ function setButton() {
       document.getElementById(page.id).hidden = true;
     });
     document.getElementById(value).hidden = false;
+
+    // When channel page is selected, update the select all button text
+    if (value === 'div-channel') {
+        updateChannelSelectAllButtonState();
+    }
   };
 
   // download json
@@ -220,6 +274,33 @@ function setButton() {
   document.getElementById('button-save-config').onclick = async () => {
     await saveConfig();
   };
+
+  // Channel Select/Deselect All button
+  const channelSelectAllButton = document.getElementById('button-channel-select-all');
+  if (channelSelectAllButton) {
+    channelSelectAllButton.onclick = () => {
+        const channelCheckboxes = document.querySelectorAll('#div-channel-list input[type="checkbox"].form-check-input');
+        if (channelCheckboxes.length === 0) return;
+
+        // Determine the target state based on current state of checkboxes
+        let allCurrentlySelected = true;
+        for (const checkbox of channelCheckboxes) {
+            if (!checkbox.checked) {
+                allCurrentlySelected = false;
+                break;
+            }
+        }
+        
+        const newCheckedState = !allCurrentlySelected;
+
+        channelCheckboxes.forEach(checkbox => {
+            checkbox.checked = newCheckedState;
+        });
+
+        // Update button text using cached translated strings
+        channelSelectAllButton.innerText = newCheckedState ? translatedButtonDeselectAll : translatedButtonSelectAll;
+    };
+  }
 }
 
 // read config
@@ -361,6 +442,12 @@ function readChannel(config, chatCode) {
   const channel = document.getElementById('div-channel-list');
   let newInnerHTML = '';
 
+  if (!chatCode || chatCode.length === 0) {
+      channel.innerHTML = '<p>No channels available.</p>'; // Or some other placeholder
+      updateChannelSelectAllButtonState(); // Update button state if no channels
+      return;
+  }
+  
   for (let index = 0; index < chatCode.length; index++) {
     const element = chatCode[index];
     const checkboxId = `checkbox-${element.ChatCode}`;
@@ -395,6 +482,8 @@ function readChannel(config, chatCode) {
     const element = chatCode[index];
     setOnInputEvent(`input-${element.ChatCode}`, `span-${element.ChatCode}`);
   }
+  // After channels are populated, update the select-all button's state
+  updateChannelSelectAllButtonState();
 }
 
 function saveChannel(config = {}, chatCode = {}) {

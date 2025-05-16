@@ -107,6 +107,7 @@ function getElementTextList() {
         // config
         'button-save-config': ['儲存', '储存', 'Save'],
         'button-save-default-config': ['預設', '预设', 'Default'],
+        'button-channel-select-all': ['全選', '全选', 'Select All'],
 
         'button-google-credential': ['開啟Google憑證檔案', '开启Google凭证档案', 'Open Google credential file'],
 
@@ -332,6 +333,8 @@ function getElementTextList() {
 
         // config
         'span-channel-comment': ['滾動滑鼠中鍵可以滑動頻道清單', '滚动鼠标中键可以滑动频道清单', 'Use middle mouse button to sroll the page'],
+        'text-select-all-helper': ['全選', '全选', 'Select All'],
+        'text-deselect-all-helper': ['取消全選', '取消全选', 'Deselect All'],
         'span-author': [
           '作者: 夜雪 (巴哈姆特電玩資訊站 winw1010)',
           '作者: 夜雪 (巴哈姆特电玩资讯站 winw1010)',
