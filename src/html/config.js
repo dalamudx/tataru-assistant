@@ -41,8 +41,9 @@ async function setView() {
 
   //document.getElementById('select-app-language').innerHTML = await ipcRenderer.invoke('get-ui-select');
 
+  // Populate font selector options BEFORE reading config that sets its value
+  await populateFontSelector(); 
   await readConfig();
-  await populateFontSelector();
 
   // change UI text
   ipcRenderer.send('change-ui-text');
@@ -235,6 +236,13 @@ async function readConfig() {
 
   // about
   document.getElementById('span-version').innerText = version;
+
+  // Apply selected font to the config window itself
+  if (config.dialog && config.dialog.fontFamily && config.dialog.fontFamily !== '') {
+    document.body.style.fontFamily = `"${config.dialog.fontFamily}", sans-serif`;
+  } else {
+    document.body.style.fontFamily = ''; // Revert to default CSS for the body (browser default or stylesheet)
+  }
 }
 
 // save config
