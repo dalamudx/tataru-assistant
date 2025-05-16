@@ -489,6 +489,10 @@ function getOptionList() {
 
     // font
     [
+      ['select-font-family', 'value'],
+      ['dialog', 'fontFamily'],
+    ],
+    [
       ['select-font-weight', 'value'],
       ['dialog', 'weight'],
     ],
@@ -700,12 +704,12 @@ async function populateFontSelector() {
         const option = document.createElement('option');
         option.value = font; // Use original font name as value
         option.textContent = font; // Display original font name
-        try {
+        /* try { // Optimized: Remove per-option font preview to prevent lag
           // Attempt to apply font preview to the option itself
           option.style.fontFamily = font;
         } catch (e) {
           console.warn(`Could not apply preview for font: ${font}`, e);
-        }
+        } */
         selectElement.appendChild(option);
       }
     });
