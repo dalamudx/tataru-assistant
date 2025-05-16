@@ -277,6 +277,11 @@ function setButton() {
     ipcRenderer.send('create-window', 'read-log');
   };
 
+  // scroll to bottom
+  document.getElementById('img-button-scroll-bottom').onclick = () => {
+    moveToBottom();
+  };
+
   // dictionary
   document.getElementById('img-button-dictionary').onclick = () => {
     ipcRenderer.send('create-window', 'dictionary');
