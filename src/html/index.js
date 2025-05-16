@@ -332,6 +332,15 @@ function resetView(config) {
 
   // set background color
   document.getElementById('div-dialog').style.backgroundColor = config.indexWindow.backgroundColor;
+  
+  // Apply font settings to index window
+  if (config.dialog && typeof config.dialog.fontFamily === 'string') {
+    if (config.dialog.fontFamily !== '') {
+      document.body.style.fontFamily = `\"${config.dialog.fontFamily}\", sans-serif`;
+    } else {
+      document.body.style.fontFamily = ''; // Revert to default CSS for the body
+    }
+  }
 
   // set min size
   ipcRenderer.send('set-min-size', config.indexWindow.minSize);

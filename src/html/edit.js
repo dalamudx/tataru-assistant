@@ -29,6 +29,22 @@ function setIPC() {
   ipcRenderer.on('send-data', async (event, id) => {
     await readLog(id);
   });
+  
+  // 接收字体更新消息
+  ipcRenderer.on('update-font-settings', (event, config) => {
+    applyFontSettings(config);
+  });
+}
+
+// 应用字体设置
+function applyFontSettings(config) {
+  if (config && config.dialog && typeof config.dialog.fontFamily === 'string') {
+    if (config.dialog.fontFamily !== '') {
+      document.body.style.fontFamily = `\"${config.dialog.fontFamily}\", sans-serif`;
+    } else {
+      document.body.style.fontFamily = ''; // 恢复到默认CSS字体
+    }
+  }
 }
 
 // set view
@@ -44,6 +60,9 @@ async function setView() {
   document.getElementById('select-to').value = config.translation.to;
 
   document.getElementById('checkbox-replace').checked = config.translation.replace;
+  
+  // 应用字体设置
+  applyFontSettings(config);
 
   // change UI text
   ipcRenderer.send('change-ui-text');

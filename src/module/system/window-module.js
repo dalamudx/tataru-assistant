@@ -1,4 +1,3 @@
-
 'use strict';
 
 // electron modules
@@ -370,6 +369,11 @@ function getWindow(windowName) {
   return windowList[windowName];
 }
 
+// get all windows
+function getAllWindows() {
+  return windowList;
+}
+
 // set window
 function setWindow(windowName, myWindow) {
   windowList[windowName] = myWindow;
@@ -459,6 +463,7 @@ module.exports = {
 
   setWindow,
   getWindow,
+  getAllWindows,
   send,
   sendIndex,
   forEachWindow,

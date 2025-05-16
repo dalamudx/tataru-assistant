@@ -18,11 +18,31 @@ function setIPC() {
     const config = await ipcRenderer.invoke('get-config');
     document.dispatchEvent(new CustomEvent('change-ui-text', { detail: config }));
   });
+  
+  // 接收字体更新消息
+  ipcRenderer.on('update-font-settings', (event, config) => {
+    applyFontSettings(config);
+  });
+}
+
+// 应用字体设置
+function applyFontSettings(config) {
+  if (config && config.dialog && typeof config.dialog.fontFamily === 'string') {
+    if (config.dialog.fontFamily !== '') {
+      document.body.style.fontFamily = `\"${config.dialog.fontFamily}\", sans-serif`;
+    } else {
+      document.body.style.fontFamily = ''; // 恢复到默认CSS字体
+    }
+  }
 }
 
 // set view
 async function setView() {
+  const config = await ipcRenderer.invoke('get-config');
   await readLogList();
+  
+  // 应用字体设置
+  applyFontSettings(config);
 
   // change UI text
   ipcRenderer.send('change-ui-text');

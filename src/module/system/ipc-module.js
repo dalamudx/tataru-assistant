@@ -102,6 +102,14 @@ function setSystemChannel() {
   // set config
   ipcMain.handle('set-config', (event, newConfig) => {
     configModule.setConfig(newConfig);
+    
+    // 当配置更新时，通知所有窗口更新字体设置
+    Object.values(windowModule.getAllWindows()).forEach(win => {
+      if (win && !win.isDestroyed()) {
+        win.webContents.send('update-font-settings', newConfig);
+      }
+    });
+    
     return configModule.getConfig();
   });
 
