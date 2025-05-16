@@ -42,6 +42,7 @@ async function setView() {
   //document.getElementById('select-app-language').innerHTML = await ipcRenderer.invoke('get-ui-select');
 
   await readConfig();
+  await populateFontSelector();
 
   // change UI text
   ipcRenderer.send('change-ui-text');
@@ -678,3 +679,43 @@ function getOptionList() {
     ],
   ];
 }
+
+// Functions for font selection (NEW)
+async function populateFontSelector() {
+  const selectElement = document.getElementById('select-font-family');
+  if (!selectElement) return;
+
+  const result = await ipcRenderer.invoke('get-system-fonts');
+
+  if (result.success && result.fonts) {
+    result.fonts.forEach(font => {
+      // Basic filtering for some common CJK fonts that might not be ideal for main UI
+      // This list can be adjusted or made more sophisticated later.
+      const lowerFont = font.toLowerCase();
+      if (lowerFont.includes('mingliu') || lowerFont.includes('simsun') || 
+          lowerFont.includes('ms jhenghei') || lowerFont.includes('ms yahei') ||
+          lowerFont.includes('gulim') || lowerFont.includes('batang')) {
+        // Skip these for now
+      } else {
+        const option = document.createElement('option');
+        option.value = font; // Use original font name as value
+        option.textContent = font; // Display original font name
+        try {
+          // Attempt to apply font preview to the option itself
+          option.style.fontFamily = font;
+        } catch (e) {
+          console.warn(`Could not apply preview for font: ${font}`, e);
+        }
+        selectElement.appendChild(option);
+      }
+    });
+  } else {
+    console.error('Failed to populate font selector:', result.error);
+    const option = document.createElement('option');
+    option.textContent = '无法加载字体列表'; // This text should be handled by i18n
+    option.id = 'option-font-load-error'; // ID for i18n
+    option.disabled = true;
+    selectElement.appendChild(option);
+  }
+}
+// END New functions

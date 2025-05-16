@@ -157,6 +157,7 @@ function getElementTextList() {
         'input-background-transparency': ['背景透明度', '背景透明度', 'Transparency'],
         'input-speech-speed': ['朗讀速度', '朗读速度', 'Speech speed'],
 
+        'select-font-family': ['字型', '字体', 'Font Family'],
         'select-font-weight': ['文字粗細', '文字粗细', 'Font weight'],
         'input-font-size': ['文字大小(rem)', '文字大小(rem)', 'Font size(rem)'],
         'input-dialog-spacing': ['對話框間隔(rem)', '对话框间隔(rem)', 'Dialog Spacing(rem)'],
@@ -245,6 +246,10 @@ function getElementTextList() {
 
         normal: ['細', '细', 'Normal'],
         bold: ['粗', '粗', 'Bold'],
+
+        // For select-font-family options
+        '': ['系統預設', '系统预设', 'System Default'],
+        'option-font-load-error': ['無法載入字型清單', '无法加载字体列表', 'Failed to load font list'],
 
         '#Web-Translator': ['#線上翻譯', '#在线翻译', '#Web'],
         Youdao: ['有道翻譯', '有道翻译', 'Youdao'],

@@ -6,6 +6,9 @@ const { dialog } = require('electron');
 // child process
 const childProcess = require('child_process');
 
+// font-list
+const fontList = require('font-list');
+
 // electron
 const { app, ipcMain, screen, BrowserWindow } = require('electron');
 
@@ -125,6 +128,21 @@ function setSystemChannel() {
   // get chat code
   ipcMain.handle('get-chat-code', () => {
     return chatCodeModule.getChatCode();
+  });
+
+  // get system fonts
+  ipcMain.handle('get-system-fonts', async () => {
+    try {
+      // font-list by default might return names with quotes if they contain spaces.
+      // { disableQuoting: true } attempts to get them motivos quotes.
+      // We'll also trim() to be safe.
+      const fonts = await fontList.getFonts({ disableQuoting: true });
+      const cleanedFonts = [...new Set(fonts.map(font => font.trim()))].sort();
+      return { success: true, fonts: cleanedFonts };
+    } catch (error) {
+      console.error('Failed to get system fonts:', error);
+      return { success: false, error: error.message || 'Failed to retrieve system fonts.' };
+    }
   });
 
   // set chat code

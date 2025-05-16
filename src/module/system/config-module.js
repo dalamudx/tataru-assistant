@@ -38,6 +38,7 @@ const defaultConfig = {
     spacing: '1',
     radius: '0',
     backgroundColor: '#000000A0',
+    fontFamily: '',
   },
   captureWindow: {
     x: -1,

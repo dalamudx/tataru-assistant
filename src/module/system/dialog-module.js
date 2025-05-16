@@ -108,6 +108,7 @@ function showDialog() {
 function getStyle(code = '003D') {
   const config = configModule.getConfig();
   return {
+    fontFamily: config.dialog.fontFamily || 'sans-serif',
     fontWeight: config.dialog.weight,
     color: chatCodeModule.getColor(code),
     fontSize: config.dialog.fontSize + 'rem',

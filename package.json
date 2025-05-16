@@ -23,6 +23,7 @@
     "axios": "^1.8.4",
     "crypto-js": "^4.2.0",
     "decompress": "^4.2.1",
+    "font-list": "^1.5.1",
     "nodejs-file-downloader": "^4.13.0",
     "sharp": "^0.33.5",
     "temp": "^0.9.4",
