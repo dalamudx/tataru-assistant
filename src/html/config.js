@@ -759,6 +759,10 @@ function getOptionList() {
       ['input-llm-model', 'value'],
       ['api', 'llmApiModel'],
     ],
+    [
+      ['input-llm-custom-prompt', 'value'],
+      ['api', 'llmCustomPrompt'],
+    ],
 
     [
       ['input-ai-chat-enable', 'checked'],

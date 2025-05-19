@@ -81,6 +81,7 @@ const defaultConfig = {
     llmApiUrl: '',
     llmApiKey: '',
     llmApiModel: '',
+    llmCustomPrompt: '',
   },
   ai: {
     useChat: false,
