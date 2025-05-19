@@ -193,6 +193,7 @@ function getElementTextList() {
         'input-llm-api-key': ['API key', 'API金钥', 'API key'],
         'input-llm-model': ['模型', '模型', 'Model'],
         'input-llm-api-url': ['API URL', 'API URL', 'API URL'],
+        'input-llm-custom-prompt': ['自定义提示词', '自订提示词', 'Custom Prompt'],
 
         'select-app-language': ['語言(Language)', '语言(Language)', 'Language'],
         'checkbox-auto-download-json': ['啟動時下載翻譯對照表', '启动时下载翻译对照表', 'Download table when started'],
